@@ -1,8 +1,20 @@
 from csp import backtracking, initialize
 
-variables = ["A", "B", "C", "D"]  
-domain = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-constraints = ["A!=B", "A!=C", "B!=D", "C!=D"]
+variables = ["A", "B", "C", "D", "E", "F", "G"]  
+domain = ["Monday", "Tuesday", "Wednesday"]
+constraints = [
+    "A!=B",
+    "A!=C",
+    "B!=C",
+    "B!=D",
+    "B!=E",
+    "C!=E",
+    "C!=F",
+    "D!=E",
+    "E!=F",
+    "E!=G",
+    "F!=G"
+]
 
 
 def main():
