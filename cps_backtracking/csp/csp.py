@@ -1,4 +1,66 @@
+class Course:
+    def __init__(self, name, domain):
+        self.name = name
+        self.domain = domain
+        self.value = None
+        
+    def assign(self, value):
+        self.value = value
+    
+    def remove_assignment(self):
+        self.value = None
+        
+    def initialize(self, variables, domain):
+        self.courses = []
+        for variable in variables:
+            course = Course(variable, domain.copy())
+            self.courses.append(course)
+        return self.courses
+    def __str__(self):
+        return f"{self.name}: {self.value}"
+
+
+def initialize(variables, domain):
+    courses = []
+    for variable in variables:
+        course = Course(variable, domain.copy())
+        courses.append(course)
+    return courses
+
+
+def is_consistent(course, assignedCourses, constraints):
+    assignedByName = {c.name: c for c in assignedCourses}
+    for constraint in constraints:
+        left, right = constraint.split("!=")
+        if course.name != left and course.name != right:
+            continue
+        othername = right if course.name == left else left
+        othercourse = assignedByName.get(othername)
+        if othercourse is None or othercourse.value is None:
+            continue
+        if course.value == othercourse.value:
+            return False
+    return True
+
+
+def backtracking(course, remainingCourses, assignedCourses, constraints):
+    for day in course.domain:
+        course.assign(day)
+        if not is_consistent(course, assignedCourses, constraints):
+            course.remove_assignment()
+            continue
+        assignedCourses.append(course)
+        if not remainingCourses:
+            return True
+        nextCourse = remainingCourses[0]
+        nextRemainingCourses = remainingCourses[1:]
+        if backtracking(nextCourse, nextRemainingCourses, assignedCourses, constraints):
+            return True
+        assignedCourses.pop()
+        course.remove_assignment()
+    return False
 from collections import deque
+import copy
 
 
 class Course:
@@ -84,122 +146,115 @@ def backtracking(
 
 
 def _neighbors(name: str, constraints: list[str]):
-    #     for each constraint in constraints
-    #         left, right <- split the constraint by "!="
-
-    #         if name is equal to left
-    #             add right to result
-    #         else if name is equal to right
-    #             add left to result
-
-    #     return result
-
-    raise Exception("Not implemented")
+    result = []
+    for constraint in constraints:
+        left, right = constraint.split("!=")
+        if name == left:
+            result.append(right)
+        elif name == right:
+            result.append(left)
+    return result    
 
 
 def _arc_satisfied(x: str, y: str, X: Course, Y: Course, constraints: list[str]):
+    for constraint in constraints:
+        left, right = constraint.split("!=")
 
-    #     for each constraint in constraints
-    #         left, right <- split the constraint by "!="
+        if (X.name == left and Y.name == right) or (X.name == right and Y.name == left):
 
-    #         if (X is left and Y is right) or (X is right and Y is left)
-    #             if x val is equal to y val
-    #                 return false
+            if x == y:
+                return False
 
-    #     return true
-    raise Exception("Not implemented")
+    return True
 
 
 def revise(X: Course, Y: Course, constraints: list[str]):
+    revised = False
 
-    #     revised <- false
+    for x in X.domain[:]:
+        if not any(_arc_satisfied(x, y, X, Y, constraints) for y in Y.domain):
+            X.domain.remove(x)
+            revised = True
 
-    #     for each x in a copy of X domain
-    #         if no value y in Y domain satisfies arc satisfied(x, y, X, Y, constraints)
-    #             remove x from X domain
-    #             revised <- true
-
-    #     return revised
-    raise Exception("Not implemented")
+    return revised
 
 
 def ac3(courses: list[Course], constraints: list[str]):
-    #     course map <- dictionary of courses using the name as key
-    #     queue <- empty deque
+    course_map = {course.name: course for course in courses}
+    queue = deque()
+    for constraint in constraints:
+        left, right = constraint.split("!=")
+        queue.append((left, right))
+        queue.append((right, left))
+        
+    while queue:
+        x_name, y_name = queue.popleft()
+        X = course_map[x_name]
+        Y = course_map[y_name]
 
-    #     for each constraint in constraints
-    #         left, right <- split the constraint by "!="
-
-    #         add (left, right) to queue
-    #         add (right, left) to queue
-
-    #     while queue is not empty
-    #         x name, y name <- take the first element from queue
-    #         X <- course with x name from course map
-    #         Y <- course with y name from course map
-
-    #         if revise(X, Y, constraints)
-    #             if X domain is empty
-    #                 return false
-    #             for each z name in neighbors(x name, constraints)
-    #                 if z name is not equal to y name
-    #                     add (z name, x name) to queue
-
-    #     return true
-    raise Exception("Not implemented")
+        if revise(X, Y, constraints):
+            if not X.domain:
+                return False
+            for z_name in _neighbors(x_name, constraints):
+                if z_name != y_name:
+                    queue.append((z_name, x_name))
+    return True
+    
 
 
-def select_mrv(unassigned: list[Course], constraints: list[str]):
-    #     return the course in unassigned with the smallest domain
-    raise Exception("Not implemented")
+def select_mrv(unassigned: list[Course], constraints: list[str]):   
+    min_size = len(unassigned[0].domain)
+    actual_course = unassigned[0]
+    for course in unassigned:
+        if course.domain:
+            if len(course.domain) < min_size:
+                min_size = len(course.domain)
+                actual_course = course
+    return actual_course
 
 
 def _degree(course: Course, unassigned_names, constraints: list[str]):
-    #     count <- 0
+    count = 0
+    for constraint in constraints:
+        left, right = constraint.split("!=")
+        if course.name == left and right in unassigned_names:
+            count += 1
+        elif course.name == right and left in unassigned_names:
+            count += 1
+    
+    return count
 
-    #     for each constraint in constraints
-    #         left, right <- split the constraint by "!="
-
-    #         if course name is equal to left and right is in unassigned names
-    #             increment count by 1
-
-    #         else if course name is equal to right and left is in unassigned names
-    #             increment count by 1
-
-    #     return count
-    raise Exception("Not implemented")
-
+   
 
 def select_degree(unassigned: list[Course], constraints: list[str]):
+    unassigned_names = {course.name for course in unassigned}
 
-    #     unassigned names <- set of names of unassigned courses
+    for course in unassigned:
+        course.degree = _degree(course, unassigned_names, constraints)
 
-    #     for each course compute degree as the number of constraints
-    #         involving that course where the other variable is also unassigned
-
-    #     return the course with the highest degree
-    raise Exception("Not implemented")
+    actual_course = unassigned[0]
+    for course in unassigned:
+        if course.degree > actual_course.degree:
+            actual_course = course
+    return actual_course
 
 
 def select_mrv_degree(unassigned: list[Course], constraints: list[str]):
-    #     min size <- smallest domain size among unassigned courses
-    #     candidates <- all unassigned courses whose domain size equals min size
+    mrv_course = select_mrv(unassigned, constraints)
+    min_size = len(mrv_course.domain)
 
-    #     if there is only one candidate
-    #         return that candidate
+    candidates = []
+    for course in unassigned:
+        if len(course.domain) == min_size:
+            candidates.append(course)
 
-    #     unassigned names <- set of names of unassigned courses
-
-    #     for each candidate compute degree as the number of constraints
-    #         involving that candidate where the other variable is also unassigned
-
-    #     return the candidate with the highest degree
-    raise Exception("Not implemented")
+    if len(candidates) == 1:
+        return candidates[0]
+    return select_degree(candidates, constraints)
 
 
 def _select_first(unassigned: list[Course], constraints: list[str]):
-    #     return the first course in unassigned
-    raise Exception("Not implemented")
+    return unassigned[0]
 
 
 def backtracking_with_inference(
@@ -208,31 +263,30 @@ def backtracking_with_inference(
     constraints: list[str],
     select=_select_first,
 ):
-    #     if unassigned is empty
-    #         return true
+    
+    if not unassigned:
+        return True
+    course = select(unassigned, constraints)
+    remaining = [c for c in unassigned if c != course]
+    
+    for day in course.domain:
+        course.assign(day)
 
-    #     course <- select var(unassigned, constraints)
-    #     remaining <- all courses in unassigned except course
+        if not is_consistent(course, assigned, constraints):
+            course.remove_assignment()
+            continue
+        assigned.append(course)
+        all_courses = assigned + remaining
+        saved_domains = {c.name: c.domain[:] for c in all_courses}
+        course.domain = [day]
+        inference_ok = ac3(all_courses, constraints)
+        if inference_ok:
+            if backtracking_with_inference(remaining, assigned, constraints, select):
+                return True
+        for c in all_courses:
+            c.domain = saved_domains[c.name]
+        assigned.remove(course)
+        course.remove_assignment()
+    return False
 
-    #     for each day in a copy of course domain
-    #         assign that day to the course
-
-    #         if the assignment is not consistent
-    #             remove the assignment from the course
-    #             continue with the next day
-
-    #         add course to assigned
-    #         all courses <- assigned combined with remaining
-    #         saved domains <- save a copy of the domain of every course in all courses
-    #         set course domain to contain only that day
-    #         inference ok <- ac3(all courses, constraints)
-
-    #         if inference ok
-    #             if backtracking with inference(remaining, assigned, constraints, select var)
-    #                 return true
-
-    #         restore the domain of every course from saved domains
-    #         remove course from assigned
-    #         remove the assignment from the course
-    #     return false
-    raise Exception("Not implemented")
+   
